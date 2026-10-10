@@ -1,29 +1,22 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-// We will create these files next
-import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import LiveMatch from './pages/LiveMatch';
-import PlayerProfiles from './pages/PlayerProfiles';
+import Home from './pages/Home';
+import CricketDashboard from './pages/CricketDashboard';
+import FootballDashboard from './pages/FootballDashboard';
 
 export default function App() {
   return (
     <Router>
-      <div style={{ display: 'flex', height: '100vh', backgroundColor: '#121212', color: '#ffffff' }}>
-        
-        {/* High-Contrast UI Sidebar persists across all pages */}
-        <Sidebar />
-
-        {/* Main Content Area */}
-        <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/live" element={<LiveMatch />} />
-            <Route path="/profiles" element={<PlayerProfiles />} />
-          </Routes>
-        </div>
-        
+      <div style={{ minHeight: '100vh',width: '100vw', backgroundColor: '#121212', color: '#ffffff' }}>
+        <Routes>
+          {/* Landing Page */}
+          <Route path="/" element={<Home />} />
+          
+          {/* Sport-Specific Dashboards */}
+          <Route path="/cricket" element={<CricketDashboard />} />
+          <Route path="/football" element={<FootballDashboard />} />
+        </Routes>
       </div>
     </Router>
   );

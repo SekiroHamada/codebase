@@ -10,10 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.1",
+    "d3": "^7.9.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
-    "socket.io": "^4.8.4"
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
