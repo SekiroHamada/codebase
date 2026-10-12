@@ -26,10 +26,11 @@ export default function FootballDashboard() {
     socket.on('init-roster', (roster) => {
       console.log('Received init-roster data:', roster);
       const metaLookup = {};
+      const startingPositions =[];
       const extractTeam = (teamList, teamName) => {
         if (!Array.isArray(teamList)) return;
         teamList.forEach((entry) => {
-          const [playerId, [name, photo, initialTrust]] = Object.entries(entry)[0];
+          const [playerId, [name, photo, initialTrust, x, y]] = Object.entries(entry)[0];
           metaLookup[playerId] = {
             id: playerId,
             name,
@@ -37,12 +38,21 @@ export default function FootballDashboard() {
             initialTrustScore: initialTrust,
             team: teamName
           };
+          //initial field coordinates
+          startingPositions.push({
+            id: playerId,
+            x: x, 
+            y: y
+          });
+
         });
       };
 
       extractTeam(roster.team1, 'Team 1');
       extractTeam(roster.team_2, 'Team 2');
       setPlayerMeta(metaLookup);
+      //render the dots using these coordinates
+      setMatchData(prev => ({ ...prev, onField: startingPositions }));
     });
 
     // 2. Listen for frame updates
