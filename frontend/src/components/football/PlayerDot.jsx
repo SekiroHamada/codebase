@@ -6,13 +6,7 @@ import * as d3 from 'd3';
 export default function PlayerDot({ player, onClick, isSelected }) {
   const meshRef = useRef();
 
-  // D3 Color Scale: Maps trust score to a color gradient (Red -> Yellow -> Blue)
-  const colorScale = d3.scaleLinear()
-    .domain([0, player.threshold, 100])
-    .range(["#ef4444", "#eab308", "#3b82f6"])
-    .clamp(true);
-
-  const dotColor = colorScale(player.trustScore);
+  const dotColor = player.trustScore < (player.threshold || 40) ? '#ef4444' : '#3b82f6';
 
   // Map 0-100 percentage coordinates to the 3D Plane dimensions (Width: 100, Depth: 60)
   const targetX = (player.x / 100) * 100 - 50;

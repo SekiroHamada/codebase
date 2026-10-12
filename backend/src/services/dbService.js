@@ -1,13 +1,11 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// Database persistence temporarily disabled due to CLI conflict
+// const { PrismaClient } = require('@prisma/client');
+// const prisma = new PrismaClient();
 
 async function persistProcessedData(sport, dataPayload) {
   try {
-    if (sport === 'cricket') {
-      await prisma.cricketMatchLog.create({ data: dataPayload });
-    } else {
-      await prisma.footballMatchLog.create({ data: dataPayload });
-    }
+    // Log instead of saving
+    console.log(`[DB Bypass] Captured frame for ${sport}.`);
   } catch (error) {
     console.error(`Database Persistence Error:`, error.message);
   }

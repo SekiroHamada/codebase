@@ -1,34 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import FootballField from '../components/football/FootballField';
 import Bench from '../components/football/Bench';
 import Sidebar from '../components/football/Sidebar';
 
-// Placeholder data generator so the dashboard works before the backend is connected
-const generateMockData = () => {
-  const onField = Array.from({ length: 22 }, (_, i) => ({
-    id: `p${i}`, 
-    name: `Player ${i + 1}`,
-    x: Math.floor(Math.random() * 90) + 5, 
-    y: Math.floor(Math.random() * 90) + 5,
-    trustScore: Math.floor(Math.random() * 100), 
-    threshold: 30
-  }));
-  const homeSubs = Array.from({ length: 9 }, (_, i) => ({ id: `hs${i}`, name: `H-Sub ${i+1}`, trustScore: 80, threshold: 30 }));
-  const awaySubs = Array.from({ length: 9 }, (_, i) => ({ id: `as${i}`, name: `A-Sub ${i+1}`, trustScore: 85, threshold: 30 }));
-  
-  return { onField, homeSubs, awaySubs, time: "45:00" };
-};
-
 export default function FootballDashboard() {
-  const [matchData, setMatchData] = useState(generateMockData());
+  const [matchData, setMatchData] = useState({ onField: [], homeSubs: [], awaySubs: [], time: "00:00" });
+  const [playerMeta, setPlayerMeta] = useState({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
 
   useEffect(() => {
-    // Connect to the Node.js WebSocket Server
-    const socket = io('http://localhost:5000');
+    const socket = io('http://localhost:5000/football');
+
+    //if connection is successful
+    socket.on('connect',()=>{
+      console.log('Successfully connected to backend with ID:', socket.id);
+    })
+    //catch network or CORS error
+    socket.on('connect_error', (error) => {
+      console.error('Socket Connection Error:', error.message);
+    });
     
+    // 1. Listen for initial roster metadata handshake
+    socket.on('init-roster', (roster) => {
+      console.log('Received init-roster data:', roster);
+      const metaLookup = {};
+      const extractTeam = (teamList, teamName) => {
+        if (!Array.isArray(teamList)) return;
+        teamList.forEach((entry) => {
+          const [playerId, [name, photo, initialTrust]] = Object.entries(entry)[0];
+          metaLookup[playerId] = {
+            id: playerId,
+            name,
+            photo,
+            initialTrustScore: initialTrust,
+            team: teamName
+          };
+        });
+      };
+
+      extractTeam(roster.team1, 'Team 1');
+      extractTeam(roster.team_2, 'Team 2');
+      setPlayerMeta(metaLookup);
+    });
+
+    // 2. Listen for frame updates
     socket.on('football-live-data', (data) => {
       if (data) {
         setMatchData(prev => ({ ...prev, ...data }));
@@ -38,73 +55,80 @@ export default function FootballDashboard() {
     return () => socket.disconnect();
   }, []);
 
+  // Merge spatial tracking data with static metadata
+  const enrichedOnField = useMemo(() => {
+    return matchData.onField.map(player => {
+      const meta = playerMeta[player.id];
+      return {
+        ...player,
+        name: meta ? meta.name : (player.name || player.id),
+        photo: meta ? meta.photo : null,
+        trustScore: player.trustScore ?? meta?.initialTrustScore ?? 50
+      };
+    });
+  }, [matchData.onField, playerMeta]);
+
   const handlePlayerClick = (player) => {
     setSelectedPlayerId(player.id);
     setIsSidebarOpen(true);
   };
 
+  const selectedPlayer = enrichedOnField.find(p => p.id === selectedPlayerId) || null;
+
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', backgroundColor: '#000', overflow: 'hidden' }}>
-      
-      {/* 3D Field Layer */}
       <FootballField 
-        players={matchData.onField} 
+        players={enrichedOnField} 
         onPlayerClick={handlePlayerClick}
         selectedPlayerId={selectedPlayerId}
       />
 
-      {/* UI Overlay Layer (Elevated zIndex and pointerEvents: none so you can drag the 3D camera) */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 40 }}>
-        
-        {/* Top-Center Match Timer */}
         <div style={{ 
           position: 'absolute', 
           top: '20px', 
           left: '50%', 
           transform: 'translateX(-50%)', 
-          background: 'rgba(0,0,0,0.8)', 
+          background: 'rgba(0,0,0,0.85)', 
           color: '#fff', 
-          padding: '10px 30px', 
+          padding: '10px 28px', 
           borderRadius: '8px', 
-          fontSize: '1.5rem', 
-          fontWeight: 'bold', 
+          fontSize: '1.4rem', 
+          fontWeight: 700, 
           pointerEvents: 'auto',
-          border: '2px solid #333'
+          border: '1px solid #333'
         }}>
           {matchData.time}
         </div>
 
-        {/* Toggle Sidebar Button */}
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           style={{ 
             position: 'absolute', 
             top: '20px', 
             right: '20px', 
-            padding: '10px 15px', 
-            background: '#3b82f6', 
+            padding: '10px 18px', 
+            background: '#2563eb', 
             color: '#fff', 
             border: 'none', 
-            borderRadius: '4px', 
+            borderRadius: '6px', 
             cursor: 'pointer', 
             pointerEvents: 'auto',
-            fontWeight: 'bold'
+            fontWeight: 600
           }}
         >
           {isSidebarOpen ? 'Close Details' : 'Player Details'}
         </button>
 
-        {/* Benches */}
         <Bench players={matchData.homeSubs} side="left" />
         <Bench players={matchData.awaySubs} side="right" />
       </div>
 
-      {/* Collapsible 1/4th Width Overlay Sidebar */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)}
-        players={matchData.onField}
-        selectedPlayerId={selectedPlayerId}
+        players={enrichedOnField}
+        selectedPlayer={selectedPlayer}
       />
     </div>
   );

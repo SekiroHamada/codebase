@@ -5,7 +5,7 @@ const { persistProcessedData } = require('../services/dbService');
 const { activeClients, dataCache } = require('../config/state');
 
 // 1. Read the raw tracking data into memory once when the module loads
-const dataPath = path.join(__dirname, '../../data/raw_tracking.json');
+const dataPath = path.join(__dirname, '../../data/rawTracking.json');
 const rawStreamData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
 function startAutoPipeline(sport) {
@@ -13,7 +13,7 @@ function startAutoPipeline(sport) {
   
   const frames = rawStreamData[sport];
   if (!frames || frames.length === 0) {
-    console.error(`No data found for ${sport} in raw_tracking.json`);
+    console.error(`No data found for ${sport} in rawT racking.json`);
     return;
   }
 
