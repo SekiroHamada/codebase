@@ -4,11 +4,20 @@ import FootballField from '../components/football/FootballField';
 import Bench from '../components/football/Bench';
 import Sidebar from '../components/football/Sidebar';
 
+
+
 export default function FootballDashboard() {
-  const [matchData, setMatchData] = useState({ onField: [], homeSubs: [], awaySubs: [], time: "00:00" });
+  const [matchData, setMatchData] = useState({
+    onField: [],
+    homeSubs: [],
+    awaySubs: [],
+    time: "00:00",
+    ball:{x:50,y:50}
+   });
   const [playerMeta, setPlayerMeta] = useState({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  
 
   useEffect(() => {
     const socket = io('http://localhost:5000/football');
@@ -73,7 +82,8 @@ export default function FootballDashboard() {
         ...player,
         name: meta ? meta.name : (player.name || player.id),
         photo: meta ? meta.photo : null,
-        trustScore: player.trustScore ?? meta?.initialTrustScore ?? 50
+        trustScore: player.trustScore ?? meta?.initialTrustScore ?? 50,
+        team: meta ? meta.team : 'Unknown'
       };
     });
   }, [matchData.onField, playerMeta]);
@@ -91,6 +101,7 @@ export default function FootballDashboard() {
         players={enrichedOnField} 
         onPlayerClick={handlePlayerClick}
         selectedPlayerId={selectedPlayerId}
+        ballPosition={matchData.ball}
       />
 
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 40 }}>
