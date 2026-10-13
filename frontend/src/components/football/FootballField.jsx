@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import PlayerDot from './PlayerDot';
 import Ball from './Ball';
 
+
 const FieldLines = () => {
   const lineMaterial = { color: 'white', linewidth: 2 };
 
@@ -157,6 +158,7 @@ export default function FootballField({ players, onPlayerClick, selectedPlayerId
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'flex', justifyContent: 'center' }}>
       <Canvas camera={{ position: [0, 70, 0.1], fov: 50 }}>
+        
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 20, 10]} intensity={0.8} />
         
@@ -183,7 +185,6 @@ export default function FootballField({ players, onPlayerClick, selectedPlayerId
             isSelected={selectedPlayerId === player.id}
           />
         ))}
-
         <OrbitControls target={[0, 0, 0]} enableRotate={true} enableZoom={true} maxPolarAngle={Math.PI / 2.1} />
       </Canvas>
     </div>

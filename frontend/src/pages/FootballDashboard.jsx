@@ -3,30 +3,29 @@ import { io } from 'socket.io-client';
 import FootballField from '../components/football/FootballField';
 import Bench from '../components/football/Bench';
 import Sidebar from '../components/football/Sidebar';
-
-
+import ScoreBoard from '../components/football/ScoreBoard';
 
 export default function FootballDashboard() {
   const [matchData, setMatchData] = useState({
     onField: [],
     homeSubs: [],
     awaySubs: [],
-    time: "00:00",
-    ball:{x:50,y:50}
-   });
+    time: "00:00.000",
+    ball: { x: 50, y: 50 },
+    team_1_goals: 0,
+    team_2_goals: 0
+  });
   const [playerMeta, setPlayerMeta] = useState({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
-  
 
   useEffect(() => {
     const socket = io('http://localhost:5000/football');
 
-    //if connection is successful
-    socket.on('connect',()=>{
+    socket.on('connect', () => {
       console.log('Successfully connected to backend with ID:', socket.id);
-    })
-    //catch network or CORS error
+    });
+
     socket.on('connect_error', (error) => {
       console.error('Socket Connection Error:', error.message);
     });
@@ -35,11 +34,15 @@ export default function FootballDashboard() {
     socket.on('init-roster', (roster) => {
       console.log('Received init-roster data:', roster);
       const metaLookup = {};
-      const startingPositions =[];
-      const extractTeam = (teamList, teamName) => {
+      const startingPositions = [];
+      const initialHomeSubs = [];
+      const initialAwaySubs = [];
+
+      const extractTeam = (teamList, teamName, subsArray) => {
         if (!Array.isArray(teamList)) return;
         teamList.forEach((entry) => {
           const [playerId, [name, photo, initialTrust, x, y]] = Object.entries(entry)[0];
+          
           metaLookup[playerId] = {
             id: playerId,
             name,
@@ -47,24 +50,43 @@ export default function FootballDashboard() {
             initialTrustScore: initialTrust,
             team: teamName
           };
-          //initial field coordinates
-          startingPositions.push({
-            id: playerId,
-            x: x, 
-            y: y
-          });
 
+          // Sort players into on-field or bench based on coordinate validity
+          if (x !== 'NaN' && y !== 'NaN') {
+            startingPositions.push({
+              id: playerId,
+              x: x, 
+              y: y
+            });
+          } else {
+            subsArray.push({
+              id: playerId,
+              name: name
+            });
+          }
         });
       };
 
-      extractTeam(roster.team1, 'Team 1');
-      extractTeam(roster.team_2, 'Team 2');
+      // Extract and sort both teams
+      extractTeam(roster.team1, 'Home', initialHomeSubs);
+      extractTeam(roster.team_2, 'Away', initialAwaySubs);
+      
       setPlayerMeta(metaLookup);
-      //render the dots using these coordinates
-      setMatchData(prev => ({ ...prev, onField: startingPositions }));
+      
+      // Initialize the match state with the sorted players
+      setMatchData(prev => ({ 
+        ...prev, 
+        onField: startingPositions,
+        homeSubs: initialHomeSubs,
+        awaySubs: initialAwaySubs,
+        time: roster.time_elapsed || "00:00.000",
+        team_1_goals: roster.team_1_goals || 0,
+        team_2_goals: roster.team_2_goals || 0,
+        ball: (roster.ball_position && roster.ball_position.x !== 'NaN') ? roster.ball_position : { x: 50, y: 50 }
+      }));
     });
 
-    // 2. Listen for frame updates
+    // 2. Listen for continuous live frame updates
     socket.on('football-live-data', (data) => {
       if (data) {
         setMatchData(prev => ({ ...prev, ...data }));
@@ -82,7 +104,7 @@ export default function FootballDashboard() {
         ...player,
         name: meta ? meta.name : (player.name || player.id),
         photo: meta ? meta.photo : null,
-        trustScore: player.trustScore ?? meta?.initialTrustScore ?? 50,
+        trustScore: player.trustScore ?? meta?.initialTrustScore ?? 100,
         team: meta ? meta.team : 'Unknown'
       };
     });
@@ -105,22 +127,14 @@ export default function FootballDashboard() {
       />
 
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 40 }}>
-        <div style={{ 
-          position: 'absolute', 
-          top: '20px', 
-          left: '50%', 
-          transform: 'translateX(-50%)', 
-          background: 'rgba(0,0,0,0.85)', 
-          color: '#fff', 
-          padding: '10px 28px', 
-          borderRadius: '8px', 
-          fontSize: '1.4rem', 
-          fontWeight: 700, 
-          pointerEvents: 'auto',
-          border: '1px solid #333'
-        }}>
-          {matchData.time}
-        </div>
+        
+        <ScoreBoard 
+          time={matchData.time}
+          team1Score={matchData.team_1_goals}
+          team2Score={matchData.team_2_goals}
+          team1Name="HOME"
+          team2Name="AWAY"
+        />
 
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}

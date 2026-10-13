@@ -81,28 +81,40 @@ function updateMetadataPositions(lineData, mapping, teamArray) {
   };
 }
 
-// Format matchMetadata into the frontend-compatible onField array
+// Format matchMetadata into the frontend-compatible payload
 function buildFrontendPayload() {
   const onField = [];
+  const homeSubs = [];
+  const awaySubs = [];
   
-  const extractToField = (teamArray) => {
-    teamArray.forEach(entry => {
-      const [id, [name, photo, trust, x, y]] = Object.entries(entry)[0];
-      if (x !== 'NaN' && y !== 'NaN') {
-        onField.push({ id, name, x, y, trustScore: trust });
-      }
-    });
-  };
+  // Parse Home Team
+  footballInitialData.team1.forEach(entry => {
+    const [id, [name, photo, trust, x, y]] = Object.entries(entry)[0];
+    if (x !== 'NaN' && y !== 'NaN') {
+      onField.push({ id, name, x, y, trustScore: trust });
+    } else {
+      homeSubs.push({ id, name });
+    }
+  });
 
-  extractToField(footballInitialData.team1);
-  extractToField(footballInitialData.team_2);
+  // Parse Away Team
+  footballInitialData.team_2.forEach(entry => {
+    const [id, [name, photo, trust, x, y]] = Object.entries(entry)[0];
+    if (x !== 'NaN' && y !== 'NaN') {
+      onField.push({ id, name, x, y, trustScore: trust });
+    } else {
+      awaySubs.push({ id, name });
+    }
+  });
 
   return {
     time: footballInitialData.time_elapsed, 
     ball: footballInitialData.ball_position,
     team_1_goals: footballInitialData.team_1_goals,
     team_2_goals: footballInitialData.team_2_goals,
-    onField: onField
+    onField: onField,
+    homeSubs: homeSubs,
+    awaySubs: awaySubs
   };
 }
 

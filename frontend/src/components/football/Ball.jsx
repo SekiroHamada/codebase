@@ -5,26 +5,19 @@ import * as THREE from 'three';
 export default function Ball({ position }) {
   const meshRef = useRef();
 
-  // Map 0-100 percentage coordinates to the 3D Plane dimensions (-50 to 50, -30 to 30)
-  // Default to center pitch (50, 50) if no live data is present yet
-  const rawX = position?.x ?? 50;
-  const rawY = position?.y ?? 50;
-  
-  const targetX = (rawX / 100) * 100 - 50;
-  const targetZ = (rawY / 100) * 60 - 30;
+  // Determine if the ball is currently tracked on the field
+  const isVisible = position && position.x !== 'NaN' && position.y !== 'NaN';
 
-  // Generate a procedural hexagonal texture so no external image assets are needed
+  // Generate a procedural hexagonal texture
   const hexTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
     
-    // Background (White)
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, 512, 512);
     
-    // Hexagon pattern lines (Black)
     ctx.strokeStyle = '#18181b';
     ctx.lineWidth = 6;
     
@@ -58,6 +51,15 @@ export default function Ball({ position }) {
 
   useFrame(() => {
     if (meshRef.current) {
+      // Toggle visibility based on Metrica tracking data
+      meshRef.current.visible = isVisible;
+
+      // Skip movement math if the ball is out of play to prevent WebGL NaN errors
+      if (!isVisible) return;
+
+      const targetX = (position.x / 100) * 100 - 50;
+      const targetZ = (position.y / 100) * 60 - 30;
+
       const dx = targetX - meshRef.current.position.x;
       const dz = targetZ - meshRef.current.position.z;
 
@@ -65,15 +67,15 @@ export default function Ball({ position }) {
       meshRef.current.position.x += dx * 0.1;
       meshRef.current.position.z += dz * 0.1;
       
-      // Calculate realistic rolling rotation based on the distance moved
+      // Calculate realistic rolling rotation
       meshRef.current.rotation.x += dz * 0.15;
       meshRef.current.rotation.z -= dx * 0.15;
     }
   });
 
   return (
-    <mesh ref={meshRef} position={[targetX, 0.4, targetZ]}>
-      {/* 0.4 radius to keep it proportional to the player checkers */}
+    // Set initial spawn to center [0, 0.4, 0] so it doesn't break on a NaN start frame
+    <mesh ref={meshRef} position={[0, 0.4, 0]}>
       <sphereGeometry args={[0.4, 32, 32]} />
       <meshStandardMaterial map={hexTexture} roughness={0.4} metalness={0.1} />
     </mesh>

@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-// Removed unused d3 import
 
 export default function PlayerDot({ player, onClick, isSelected }) {
   const groupRef = useRef();
@@ -9,8 +8,8 @@ export default function PlayerDot({ player, onClick, isSelected }) {
   // Determine trust score color (Inner Layer)
   const dotColor = player.trustScore < (player.threshold || 40) ? '#ef4444' : '#3b82f6';
   
-  // Determine team color (Outer Layer: White for Team 1, Dark Gray/Black for Team 2)
-  const teamColor = player.team === 'Team 2' ? '#18181b' : '#f8fafc';
+  // Determine team color (Outer Layer: White for Home, Black for Away)
+  const teamColor = player.team === 'Away' ? '#000000' : '#ffffff';
 
   // Map 0-100 percentage coordinates to the 3D Plane dimensions (Width: 100, Depth: 60)
   const targetX = (player.x / 100) * 100 - 50;
@@ -35,7 +34,7 @@ export default function PlayerDot({ player, onClick, isSelected }) {
     >
       {/* Outer Layer: Team Color */}
       <mesh position={[0, 0, 0]}>
-        <cylinderGeometry args={[1.2, 1.2, 0.4, 32]} />
+        <cylinderGeometry args={[0.6, 0.6, 0.4, 32]} />
         <meshStandardMaterial 
           color={teamColor} 
           emissive={isSelected ? "#ffffff" : "#000000"} 
@@ -47,7 +46,7 @@ export default function PlayerDot({ player, onClick, isSelected }) {
       {/* Inner Layer: Trust Score */}
       {/* Placed slightly higher on the Y-axis (0.02) to prevent flickering where meshes overlap */}
       <mesh position={[0, 0.02, 0]}> 
-        <cylinderGeometry args={[0.8, 0.8, 0.4, 32]} />
+        <cylinderGeometry args={[0.4, 0.4, 0.4, 32]} />
         <meshStandardMaterial color={dotColor} roughness={0.3} />
       </mesh>
 
