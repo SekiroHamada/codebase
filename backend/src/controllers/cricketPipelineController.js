@@ -3,6 +3,7 @@ const path = require('path');
 const { activeClients } = require('../config/state');
 const { cricketState } = require('../config/cricketState');
 const { cricketInitialData } = require('../config/matchMetadata');
+const { CricketTrustClient } = require('../services/cricketTrustClient');
 
 /**
  * Cricket replay pipeline (IPL Hawkeye ball-by-ball data).
@@ -24,6 +25,10 @@ const { cricketInitialData } = require('../config/matchMetadata');
  * Env:
  *   CRICKET_MATCH_ID              match to replay (default: first match in the file)
  *   CRICKET_DELIVERY_INTERVAL_MS  time between deliveries (default 7000)
+ *   CRICKET_ML_URL                cricket trust-score service (ml_service/, default http://127.0.0.1:8001)
+ *
+ * Trust scores: every delivery is sent, in order, to the cricket ML service; its batter/bowler
+ * trustScore replaces the default 100. If the service is not running, trust stays at 100.
  */
 
 const DATA_FILE = path.join(__dirname, '../../data/mensIPLHawkeyeStats.csv');
@@ -108,6 +113,7 @@ function cleanDelivery(row) {
     extras: extras || null,
     dismissal: dismissal || null,
     isWicket: !!dismissal && !/^retired/i.test(dismissal),
+    raw: row,
   };
 }
 
@@ -161,6 +167,47 @@ cricketInitialData.team1 = teamIds[1].map((id) => ({ [id]: [playerName.get(id), 
 cricketInitialData.team_2 = teamIds[2].map((id) => ({ [id]: [playerName.get(id), '', 100, 'NaN', 'NaN'] }));
 
 // ---------------------------------------------------------------------------
+// Cricket ML service request (same fields and rules as controllers/cricketController.js)
+// ---------------------------------------------------------------------------
+const trustClient = new CricketTrustClient();
+const mlVal = (v) => {
+  const n = Number(v);
+  return v !== undefined && String(v).trim() !== '' && Number.isFinite(n) && n !== -1 ? n : null;
+};
+const mlLegal = (row) => !/wd|wide|nb|no.ball/.test(String(row.extras || '').toLowerCase());
+const firstInningsTarget = allRows
+  .filter((r) => r.matchId === matchId && String(r.delivery).startsWith('1.'))
+  .reduce((sum, r) => sum + (Number(r.runs) || 0), 0) + 1;
+let mlScore = null;
+
+function mlRequest(d) {
+  const row = d.raw;
+  if (!mlScore || mlScore.innings !== d.innings) {
+    mlScore = { innings: d.innings, runs: 0, wickets: 0, legal_balls: 0 };
+  }
+  const legal = mlLegal(row);
+  mlScore.runs += Number(row.runs) || 0;
+  if (String(row.dismissalDetails || '').trim() !== '') mlScore.wickets += 1;
+  if (legal) mlScore.legal_balls += 1;
+  return {
+    match_id: String(matchId),
+    event_index: 0, // set by the client (sequential per replay)
+    batter: { id: String(row.batterId), name: row.batter },
+    bowler: { id: String(row.bowlerId), name: row.bowler },
+    ball: {
+      delivery_id: row.delivery, speed_mps: mlVal(row.ballSpeed),
+      pitch_x: mlVal(row.pitchX), pitch_y: mlVal(row.pitchY),
+      stumps_x: mlVal(row.stumpsX), stumps_y: mlVal(row.stumpsY),
+      field_x: mlVal(row.fieldX), field_y: mlVal(row.fieldY),
+      batter_runs: Number(row.batterRuns) || 0, bowler_runs: Number(row.bowlerRuns) || 0,
+      total_runs: Number(row.runs) || 0, extras: String(row.extras || '').trim(),
+      dismissal: String(row.dismissalDetails || '').trim(), legal,
+    },
+    score: { ...mlScore, target: d.innings === 2 ? firstInningsTarget : null, scheduled_balls: 120 },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Replay
 // ---------------------------------------------------------------------------
 let pointer = 0;
@@ -184,12 +231,12 @@ function buildPayload(d) {
   // Only the bowler and the striker stand on the field
   const batterSide = d.rightHandedBat ? -1 : 1; // body on the leg side of the stumps
   const bowlerSide = d.rightArmedBowl ? -1 : 1; // bowling arm side
-  const striker = { id: d.batterId, name: d.batter, trustScore: 100, role: 'batter', ...toPercent(batterSide * SIDE_OFFSET, BATTER_Z) };
-  const bowler = { id: d.bowlerId, name: d.bowler, trustScore: 100, role: 'bowler', ...toPercent(bowlerSide * SIDE_OFFSET, BOWLER_Z) };
+  const striker = { id: d.batterId, name: d.batter, trustScore: trustClient.trustOf(d.batterId), role: 'batter', ...toPercent(batterSide * SIDE_OFFSET, BATTER_Z) };
+  const bowler = { id: d.bowlerId, name: d.bowler, trustScore: trustClient.trustOf(d.bowlerId), role: 'bowler', ...toPercent(bowlerSide * SIDE_OFFSET, BOWLER_Z) };
 
   const onFieldIds = new Set([striker.id, bowler.id]);
   const bench = (team) =>
-    teamIds[team].filter((id) => !onFieldIds.has(id)).map((id) => ({ id, name: playerName.get(id) }));
+    teamIds[team].filter((id) => !onFieldIds.has(id)).map((id) => ({ id, name: playerName.get(id), trustScore: trustClient.trustOf(id) }));
 
   return {
     matchId,
@@ -221,6 +268,16 @@ function buildPayload(d) {
       dismissal: d.dismissal,
       isWicket: d.isWicket,
     },
+    // full output of the cricket ML service for this delivery (null if it is not running)
+    ml: trustClient.last && trustClient.last.delivery_id === d.raw.delivery
+      ? {
+          pressure: trustClient.last.pressure,
+          batter: trustClient.last.batter,
+          bowler: trustClient.last.bowler,
+          status: trustClient.last.status,
+          modelVersion: trustClient.last.model_version,
+        }
+      : null,
   };
 }
 
@@ -231,17 +288,22 @@ function broadcast(payload) {
   }
 }
 
-function tick() {
+async function tick() {
   if (pointer >= deliveries.length) {
     pointer = 0;
     replay += 1;
     resetScore();
+    trustClient.reset();   // the ML service restarts its state at event 0
+    mlScore = null;
     setTimeout(tick, PAUSE_AFTER_MATCH_MS);
     return;
   }
-  broadcast(buildPayload(deliveries[pointer]));
+  const started = Date.now();
+  const d = deliveries[pointer];
+  await trustClient.push(mlRequest(d));   // never throws; trust stays 100 if the service is down
+  broadcast(buildPayload(d));
   pointer += 1;
-  setTimeout(tick, DELIVERY_INTERVAL_MS);
+  setTimeout(tick, Math.max(0, DELIVERY_INTERVAL_MS - (Date.now() - started)));
 }
 
 function startAutoPipeline() {
