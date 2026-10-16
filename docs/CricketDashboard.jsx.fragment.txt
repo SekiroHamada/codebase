@@ -1,0 +1,8 @@
+Copy the following scoreboard snippet into CricketDashboard.jsx replacing {matchData.time}:
+
+          <div style={{fontSize:'0.76rem',color:'#93c5fd'}}>Match {matchData.matchId ?? '...'} · Delivery {matchData.deliveryId ?? '...'}</div>
+          <div>{matchData.runs ?? 0}/{matchData.wickets ?? 0} · {matchData.overs ?? '0.0'} overs</div>
+          <div style={{fontSize:'0.82rem',color:'#ddd'}}>Batter: {matchData.batter?.name || '—'} — Trust {matchData.batter?.trustScore ?? '—'}</div>
+          <div style={{fontSize:'0.82rem',color:'#ddd'}}>Bowler: {matchData.bowler?.name || '—'} — Trust {matchData.bowler?.trustScore ?? '—'}</div>
+          <div style={{fontSize:'0.78rem',color:'#ddd'}}>Pressure {matchData.pressure?.score ?? '—'} / 100 ({matchData.pressure?.level ?? '—'})</div>
+          <div style={{fontSize:'0.63rem',color:'#fbbf24'}}>PROTOTYPE SCORES — NOT TRAINED AI</div>

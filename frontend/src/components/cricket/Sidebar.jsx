@@ -51,7 +51,7 @@ export default function Sidebar({ isOpen, onClose, players, selectedPlayer }) {
 
       <div>
         <span style={{ color: '#71717a', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-          All Active Players ({players.length})
+          Visible Players ({players.length})
         </span>
         <div style={{ marginTop: '10px' }}>
           {players.map(p => (

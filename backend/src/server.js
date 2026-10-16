@@ -2,7 +2,9 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-
+const {
+  startCricketReplay
+} = require('./controllers/cricketController');
 const initializeSockets = require('./sockets/socketManager');
 const apiRoutes = require('./routes/apiRoutes');
 const { startAutoPipeline } = require('./controllers/pipelineController');
@@ -27,5 +29,4 @@ httpServer.listen(5000, () => {
   
   // Automatically start the continuous data pipelines on boot
   startAutoPipeline('football');
-  startAutoPipeline('cricket');
 });

@@ -37,3 +37,20 @@ backend/.devin/
 .env
 .env.*
 backend/data/*.json
+# Python
+**/.venv/
+**/__pycache__/
+*.pyc
+
+# Node
+**/node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Trained ML model artifacts
+ml_service/artifacts/
+
+# Large cricket dataset
+backend/data/mensIPLHawkeyeStats.csv
