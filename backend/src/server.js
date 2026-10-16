@@ -26,6 +26,6 @@ httpServer.listen(5000, () => {
   console.log('Backend server running on port 5000');
   
   // Automatically start the continuous data pipelines on boot
-  startAutoPipeline('football');
+  startAutoPipeline('football').catch((err) => console.error('[PFF] football pipeline failed to start:', err.message));
   startAutoPipeline('cricket');
 });

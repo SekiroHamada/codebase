@@ -37,3 +37,5 @@ backend/.devin/
 .env
 .env.*
 backend/data/*.json
+# PFF WC2022 raw data (5.4 GB) - copy locally, do not commit
+backend/data/pff_wc2022/
