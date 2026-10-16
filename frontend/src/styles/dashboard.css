@@ -5,10 +5,11 @@
   width: 100vw;
   background: var(--bg);
   overflow: hidden;
-  padding: 8px;
+  padding: 0; /* no outer bezel: the app fills the whole window */
 }
 
 .dash__blob {
+  display: none; /* decorative blobs only showed in the removed outer bezel */
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
@@ -34,8 +35,7 @@
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
   background: var(--surface);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
+  border-radius: 0;
   overflow: hidden;
 }
 
