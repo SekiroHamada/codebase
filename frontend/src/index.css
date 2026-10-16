@@ -1,3 +1,37 @@
+/* ------------------------------------------------------------------
+   Design tokens — palette and type taken from the reference UI
+   (soft lavender / indigo / pink with sky-blue accents, Outfit font)
+------------------------------------------------------------------- */
+:root {
+  --font: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --bg: #eef0f8;          /* page backdrop */
+  --surface: #ffffff;     /* cards, left bar */
+  --panel: #f6f7fc;       /* main content panel */
+  --line: #ececf5;
+
+  --ink: #1d1d2c;         /* headings */
+  --text: #4a4a63;        /* body */
+  --muted: #9b9bb3;       /* labels */
+
+  --indigo: #5a5db4;      /* primary */
+  --indigo-deep: #3b3a80; /* dark banner */
+  --lavender: #e2e1f4;    /* soft primary fill */
+  --pink: #e9b9d3;        /* accent */
+  --pink-soft: #f7ebf2;   /* active nav pill */
+  --sky: #c8edf8;
+  --yellow: #fce3a3;
+
+  --good: #4fb477;
+  --warn: #e9a23b;
+  --bad: #e05a6a;
+
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 14px;
+  --shadow: 0 18px 40px -18px rgba(59, 58, 128, 0.25);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -7,5 +41,12 @@ html, body, #root {
   padding: 0;
   width: 100%;
   height: 100%;
-  background-color: #121212; /* Matches your App.jsx background */
+  background-color: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input {
+  font-family: inherit;
 }

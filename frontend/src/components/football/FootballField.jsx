@@ -1,10 +1,105 @@
-import React, { useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import PlayerDot from './PlayerDot';
 import Ball from './Ball';
 
+
+// ---------------------------------------------------------------------------
+// Camera
+// ---------------------------------------------------------------------------
+const FOV = 50;
+// Area the overview must always show: pitch (100 x 60) + goals + a small margin
+const OVERVIEW_SPAN_X = 112;
+const OVERVIEW_SPAN_Z = 66;
+
+// Ball cam: camera sits behind the ball (relative to its direction of travel),
+// BALL_CAM_DISTANCE away, looking down at BALL_CAM_ELEVATION_DEG from the ground.
+const BALL_CAM_DISTANCE = 22;
+const BALL_CAM_ELEVATION_DEG = 45;
+const BALL_CAM_FOLLOW = 0.08;   // how quickly the camera catches up (0–1 per frame)
+const BALL_HEADING_TURN = 0.03; // how quickly "behind" swings round when the ball changes direction
+
+const toPitch = (pos) => ({
+  x: (pos.x / 100) * 100 - 50,
+  z: (pos.y / 100) * 60 - 30,
+});
+
+const lerpAngle = (a, b, t) => {
+  let d = b - a;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return a + d * t;
+};
+
+function CameraRig({ mode, ballPosition }) {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls);
+  const width = useThree((s) => s.size.width);
+  const height = useThree((s) => s.size.height);
+
+  const focus = useRef(new THREE.Vector3());
+  const lastFocus = useRef(new THREE.Vector3());
+  const heading = useRef(0); // radians in the x/z plane; 0 = camera looks towards +x
+  const desiredCam = useRef(new THREE.Vector3());
+
+  // Overview: same top-down camera as before, height fitted so the whole pitch fills the panel
+  useEffect(() => {
+    if (mode !== 'overview') return;
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+    const aspect = width / Math.max(height, 1);
+    const h = Math.max(OVERVIEW_SPAN_Z / 2, OVERVIEW_SPAN_X / 2 / aspect) / tanHalf;
+    camera.position.set(0, h, 0.1);
+    camera.lookAt(0, 0, 0);
+    if (controls) {
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+  }, [mode, width, height, camera, controls]);
+
+  // Ball cam: start from wherever the ball currently is
+  useEffect(() => {
+    if (mode !== 'ball') return;
+    if (ballPosition && ballPosition.x !== 'NaN' && ballPosition.y !== 'NaN') {
+      const { x, z } = toPitch(ballPosition);
+      focus.current.set(x, 0, z);
+      lastFocus.current.copy(focus.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
+  useFrame(() => {
+    if (mode !== 'ball') return;
+
+    // Hold the last known spot while the ball is out of play (NaN)
+    if (ballPosition && ballPosition.x !== 'NaN' && ballPosition.y !== 'NaN') {
+      const { x, z } = toPitch(ballPosition);
+      focus.current.x += (x - focus.current.x) * 0.1; // same smoothing as Ball.jsx
+      focus.current.z += (z - focus.current.z) * 0.1;
+    }
+
+    // Direction of travel -> which side is "behind" the ball
+    const dx = focus.current.x - lastFocus.current.x;
+    const dz = focus.current.z - lastFocus.current.z;
+    if (Math.hypot(dx, dz) > 0.015) {
+      heading.current = lerpAngle(heading.current, Math.atan2(dz, dx), BALL_HEADING_TURN);
+    }
+    lastFocus.current.copy(focus.current);
+
+    const el = THREE.MathUtils.degToRad(BALL_CAM_ELEVATION_DEG);
+    const back = BALL_CAM_DISTANCE * Math.cos(el);
+    desiredCam.current.set(
+      focus.current.x - Math.cos(heading.current) * back,
+      BALL_CAM_DISTANCE * Math.sin(el),
+      focus.current.z - Math.sin(heading.current) * back
+    );
+    camera.position.lerp(desiredCam.current, BALL_CAM_FOLLOW);
+    camera.lookAt(focus.current);
+  });
+
+  return null;
+}
 
 const FieldLines = () => {
   const lineMaterial = { color: 'white', linewidth: 2 };
@@ -154,17 +249,20 @@ const Goal3D = ({ isLeft }) => {
   );
 };
 
-export default function FootballField({ players, onPlayerClick, selectedPlayerId,ballPosition }) {
+export default function FootballField({ players, onPlayerClick, selectedPlayerId, ballPosition, cameraMode = 'overview' }) {
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 1, display: 'flex', justifyContent: 'center' }}>
-      <Canvas camera={{ position: [0, 70, 0.1], fov: 50 }}>
+      <Canvas camera={{ position: [0, 70, 0.1], fov: FOV }}>
+        <CameraRig mode={cameraMode} ballPosition={ballPosition} />
+
         
         <ambientLight intensity={0.6} />
         <directionalLight position={[10, 20, 10]} intensity={0.8} />
         
         {/* Pitch Ground Plane */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-          <planeGeometry args={[110, 70]} /> 
+          {/* Larger than the pitch so no background shows around it in either camera */}
+          <planeGeometry args={[400, 300]} />
           <meshStandardMaterial color="#3A5311" /> 
         </mesh>
 
@@ -185,7 +283,14 @@ export default function FootballField({ players, onPlayerClick, selectedPlayerId
             isSelected={selectedPlayerId === player.id}
           />
         ))}
-        <OrbitControls target={[0, 0, 0]} enableRotate={true} enableZoom={true} maxPolarAngle={Math.PI / 2.1} />
+        <OrbitControls
+          makeDefault
+          enabled={cameraMode === 'overview'}
+          target={[0, 0, 0]}
+          enableRotate={true}
+          enableZoom={true}
+          maxPolarAngle={Math.PI / 2.1}
+        />
       </Canvas>
     </div>
   );

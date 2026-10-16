@@ -163,14 +163,14 @@ function startAutoPipeline(sport) {
         const type = latestEventData[1];     // e.g., "SHOT"
         const subtype = latestEventData[2];  // e.g., "ON TARGET-GOAL"
 
-        if (subtype && subtype.includes('GOAL')) {
-          if (type === 'Own goal') {
-            if (team === 'Home') footballInitialData.team_2_goals++;
-            if (team === 'Away') footballInitialData.team_1_goals++;
-          } else {
-            if (team === 'Home') footballInitialData.team_1_goals++;
-            if (team === 'Away') footballInitialData.team_2_goals++;
-          }
+        // Only a SHOT whose subtype ends in "-GOAL" is a goal
+        // (e.g. "ON TARGET-GOAL", "HEAD-ON TARGET-GOAL").
+        // "GOAL KICK" set pieces and "WOODWORK-GOAL" ball-outs must NOT count.
+        const isGoal = type === 'SHOT' && /-GOAL$/.test((subtype || '').trim());
+
+        if (isGoal) {
+          if (team === 'Home') footballInitialData.team_1_goals++;
+          if (team === 'Away') footballInitialData.team_2_goals++;
         }
       } else {
         break;

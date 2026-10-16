@@ -4,6 +4,7 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
+import PlayerTag from '../common/PlayerTag';
 
 export default function PlayerDot({ player, onClick, isSelected }) {
   const groupRef = useRef();
@@ -46,18 +47,12 @@ export default function PlayerDot({ player, onClick, isSelected }) {
       </mesh>
 
       <Html position={[0, 1.8, 0]} center style={{ pointerEvents: 'none' }}>
-        <div style={{
-          color: 'white', 
-          background: 'rgba(0,0,0,0.65)', 
-          padding: '2px 6px',
-          borderRadius: '4px', 
-          fontSize: '10px', 
-          fontWeight: 'bold', 
-          whiteSpace: 'nowrap',
-          border: isSelected ? '1px solid #60a5fa' : 'none'
-        }}>
-          {player.name}
-        </div>
+        <PlayerTag
+          name={player.name}
+          dark={player.team === 'Team 2'}
+          badge={player.team === 'Team 2' ? '2' : '1'}
+          isSelected={isSelected}
+        />
       </Html>
     </group>
   );
