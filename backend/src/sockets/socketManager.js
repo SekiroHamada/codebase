@@ -1,6 +1,5 @@
 const { activeClients } = require('../config/state');
 const { footballInitialData, cricketInitialData } = require('../config/matchMetadata');
-const { startCricketReplay, getCurrentCricketPayload, getCricketReplayStatus } = require('../controllers/cricketController');
 
 module.exports = function initializeSockets(io) {
   // Cricket Connection Pathway
@@ -10,15 +9,7 @@ module.exports = function initializeSockets(io) {
     activeClients.cricket.set(socket.id, socket);
     
     //for sending initial data
-    const status = getCricketReplayStatus();
     socket.emit('init-roster', cricketInitialData);
-    const latest = getCurrentCricketPayload();
-    if (latest) socket.emit('cricket-live-data', latest);
-    // Start only when the first cricket frontend actually joins.
-    if (!status.running && !status.finished && status.processedEvents === 0) {
-      startCricketReplay().catch(error => console.error('[CRICKET]', error.message));
-    }
-    if (status.finished) socket.emit('cricket-replay-ended', {matchId: status.matchId});
 
 
     socket.on('disconnect', () => {

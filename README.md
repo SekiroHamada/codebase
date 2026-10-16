@@ -79,20 +79,20 @@ Test-Path .\artifacts\cricket_model.joblib
 
 Open **three separate VS Code terminals** and keep them open. Start in this order:
 
-### Terminal 1 — FastAPI / Python (port 8000)
+### Terminal 1 — FastAPI / Python, cricket ML (port 8001; the football ML server uses 8000)
 
 ```powershell
 cd C:\Users\jimk7\Desktop\Projects\AI\codebase\ml_service
-.\.venv\Scripts\python.exe -m uvicorn main:app --port 8000
+.\.venv\Scripts\python.exe -m uvicorn main:app --port 8001
 ```
 
-Check <http://127.0.0.1:8000/health>. With trained v3 files and model loaded, expect:
+Check <http://127.0.0.1:8001/health>. With trained v3 files and model loaded, expect:
 
 ```json
 {"status":"ok","engine":"trained-context-eb-conformal-v3","trained_model":true}
 ```
 
-Model metadata: <http://127.0.0.1:8000/model/info>.
+Model metadata: <http://127.0.0.1:8001/model/info>.
 
 ### Terminal 2 — Node.js / Express (port 5000)
 
@@ -101,7 +101,7 @@ cd C:\Users\jimk7\Desktop\Projects\AI\codebase\backend
 $env:Path = "C:\Program Files\nodejs;" + $env:Path
 $env:CRICKET_MATCH_ID = "2"
 $env:CRICKET_REPLAY_INTERVAL_MS = "2000"
-$env:ML_SERVICE_URL = "http://127.0.0.1:8000"
+$env:ML_SERVICE_URL = "http://127.0.0.1:8001"
 npm.cmd run dev
 ```
 
@@ -138,9 +138,9 @@ Match IDs follow the CSV. A delivery ID like `2.15.4` means second innings, over
 | POST | `/api/cricket/select` | Change selected match; JSON `{"matchId":"2"}` |
 | POST | `/api/cricket/restart` | Restart current selected match |
 | GET | `/api/health` | Express backend health |
-| GET | `http://127.0.0.1:8000/health` | Python ML health |
-| GET | `http://127.0.0.1:8000/model/info` | Model version and evaluation information |
-| POST | `http://127.0.0.1:8000/evaluate/cricket/post-ball` | Completed-delivery ML scoring (called by Node.js) |
+| GET | `http://127.0.0.1:8001/health` | Python ML health |
+| GET | `http://127.0.0.1:8001/model/info` | Model version and evaluation information |
+| POST | `http://127.0.0.1:8001/evaluate/cricket/post-ball` | Completed-delivery ML scoring (called by Node.js) |
 
 The cricket match is **shared across connected viewers**: selecting/restarting changes the one server-side replay, not just the current browser tab.
 
@@ -150,13 +150,13 @@ The cricket match is **shared across connected viewers**: selecting/restarting c
 |---|---|
 | `node` or `npm.cmd` not recognized | In that terminal, run `$env:Path = "C:\Program Files\nodejs;" + $env:Path`. |
 | `Permission denied` for `.venv` files | Stop Python/Uvicorn before modifying the environment; do not delete a running environment. |
-| Port 8000 / 5000 / 5173 already in use | A server may already be running. Stop the existing instance with **Ctrl+C**; avoid starting duplicate instances. |
+| Port 8001 / 5000 / 5173 already in use | A server may already be running. Stop the existing instance with **Ctrl+C**; avoid starting duplicate instances. |
 | `/health` shows `prototype-rule-based` or `trained_model:false` | Check that v3 `main.py` was copied and `artifacts/cricket_model.joblib` was generated; restart FastAPI. |
 | Cricket selector reports HTTP 404 | Check `backend/src/routes/apiRoutes.js` and that `backend/src/server.js` contains `app.use('/api', apiRoutes);`; restart Node.js. |
 | Dropdown takes time to populate | Node may be reading/scanning the large CSV to enumerate matches. Match metadata caching is a possible later optimization. |
 | Selected match produces ML error | v3 may have been trained with a different `--exclude-match`; see multi-match limitation in Section 2. |
 | Replay starts in the middle | It may have been running before the frontend connected. Use **Restart Match** and confirm the updated cricket controller is installed. |
-| Frontend has no live updates | Confirm ports 5000 and 8000 are responding, check the browser console, and confirm Node Socket.IO cricket namespace is connected. |
+| Frontend has no live updates | Confirm ports 5000 and 8001 are responding, check the browser console, and confirm Node Socket.IO cricket namespace is connected. |
 | Python packages missing | Run `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` inside `ml_service`. |
 
 ## 6. Git workflow for the cricket feature

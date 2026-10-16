@@ -1,64 +1,57 @@
-// WE CAN REMOVE THIS FILE AS IT IS THE SAME AS THE FOOTBALL ONE
-
-
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { CHOKE_THRESHOLD } from '../dashboard/trust';
+import { percentToWorld } from './geometry';
 
-export default function PlayerDot({ player, onClick, isSelected }) {
+/**
+ * Bowler / striker marker. Positions come from the backend as % of the ground oval
+ * (50/50 = centre), so they're converted with the same geometry as the ball.
+ *
+ * The name tag is not drawn here: CricketField's PlayerLabels overlay follows the
+ * group passed to `anchorRef`. (drei's <Html> gives every tag its own React root,
+ * which React 19 can drop when the striker or bowler changes.)
+ */
+export default function PlayerDot({ player, onClick, isSelected, anchorRef }) {
   const groupRef = useRef();
 
-  const dotColor = player.trustScore < (player.threshold || 40) ? '#ef4444' : '#3b82f6';
+  const dotColor = player.trustScore < (player.threshold || CHOKE_THRESHOLD) ? '#ef4444' : '#3b82f6';
   const teamColor = player.team === 'Team 2' ? '#18181b' : '#f8fafc';
 
-  const targetX = (player.x / 100) * 100 - 50;
-  const targetZ = (player.y / 100) * 60 - 30;
+  const { x: targetX, z: targetZ } = percentToWorld(player.x, player.y);
 
   useFrame(() => {
     if (groupRef.current) {
-      groupRef.current.position.x += (targetX - groupRef.current.position.x) * 0.05;
-      groupRef.current.position.z += (targetZ - groupRef.current.position.z) * 0.05;
+      groupRef.current.position.x += (targetX - groupRef.current.position.x) * 0.08;
+      groupRef.current.position.z += (targetZ - groupRef.current.position.z) * 0.08;
     }
   });
 
   return (
-    <group 
-      ref={groupRef} 
+    <group
+      ref={(obj) => {
+        groupRef.current = obj;
+        anchorRef?.(obj);
+      }}
       position={[targetX, 0.2, targetZ]}
-      onClick={(e) => { 
-        e.stopPropagation(); 
-        onClick(player); 
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(player);
       }}
     >
       <mesh position={[0, 0, 0]}>
-        <cylinderGeometry args={[1.2, 1.2, 0.4, 32]} />
-        <meshStandardMaterial 
-          color={teamColor} 
-          emissive={isSelected ? "#ffffff" : "#000000"} 
-          emissiveIntensity={isSelected ? 0.4 : 0} 
+        <cylinderGeometry args={[0.95, 0.95, 0.4, 32]} />
+        <meshStandardMaterial
+          color={teamColor}
+          emissive={isSelected ? '#ffffff' : '#000000'}
+          emissiveIntensity={isSelected ? 0.4 : 0}
           roughness={0.7}
         />
       </mesh>
 
-      <mesh position={[0, 0.02, 0]}> 
-        <cylinderGeometry args={[0.8, 0.8, 0.4, 32]} />
+      <mesh position={[0, 0.02, 0]}>
+        <cylinderGeometry args={[0.62, 0.62, 0.4, 32]} />
         <meshStandardMaterial color={dotColor} roughness={0.3} />
       </mesh>
-
-      <Html position={[0, 1.8, 0]} center style={{ pointerEvents: 'none' }}>
-        <div style={{
-          color: 'white', 
-          background: 'rgba(0,0,0,0.65)', 
-          padding: '2px 6px',
-          borderRadius: '4px', 
-          fontSize: '10px', 
-          fontWeight: 'bold', 
-          whiteSpace: 'nowrap',
-          border: isSelected ? '1px solid #60a5fa' : 'none'
-        }}>
-          {player.name}
-        </div>
-      </Html>
     </group>
   );
 }

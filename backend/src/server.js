@@ -2,12 +2,11 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const {
-  startCricketReplay
-} = require('./controllers/cricketController');
 const initializeSockets = require('./sockets/socketManager');
+const initializeCricketSockets = require('./sockets/cricketSocketManager');
 const apiRoutes = require('./routes/apiRoutes');
 const { startAutoPipeline } = require('./controllers/pipelineController');
+const { startAutoPipeline: startCricketPipeline } = require('./controllers/cricketPipelineController');
 
 const app = express();
 app.use(cors());
@@ -20,6 +19,7 @@ const io = new Server(httpServer, {
 
 // Initialize WebSocket namespaces[cite: 12]
 initializeSockets(io);
+initializeCricketSockets(io); // after the shared handler, so 'init-roster' is sent first
 
 // Mount HTTP routes
 app.use('/api', apiRoutes);
@@ -29,4 +29,5 @@ httpServer.listen(5000, () => {
   
   // Automatically start the continuous data pipelines on boot
   startAutoPipeline('football');
+  startCricketPipeline(); // Hawkeye ball-by-ball replay; trust scores from ml_service (port 8001)
 });

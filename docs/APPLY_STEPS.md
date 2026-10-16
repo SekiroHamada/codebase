@@ -8,7 +8,7 @@ This is a **ball-by-ball after-ball prototype**, not a trained or validated chok
 3. In `backend/src/server.js`, add `const { startCricketReplay } = require('./controllers/cricketController');` beside the other imports. Inside `httpServer.listen(...`, after `startAutoPipeline('cricket');` add `startCricketReplay().catch(console.error);`.
 4. In `backend/src/sockets/socketManager.js`, add `const { getCurrentCricketPayload } = require('../controllers/cricketController');` at top. Within the cricket `connection` handler, immediately after `socket.emit('init-roster', cricketInitialData);`, add `const latest = getCurrentCricketPayload(); if (latest) socket.emit('cricket-live-data', latest);`.
 5. In `backend/`, run `npm install` and `npm install csv-parse`.
-6. In `ml_service/`, run `python -m venv .venv`, activate it, `pip install -r requirements.txt` and `python -m uvicorn main:app --host 127.0.0.1 --port 8000`.
+6. In `ml_service/`, run `python -m venv .venv`, activate it, `pip install -r requirements.txt` and `python -m uvicorn main:app --host 127.0.0.1 --port 8001`.
 7. In separate terminal, `cd backend`, then set environment variables: PowerShell: `$env:CRICKET_MATCH_ID='2'; $env:CRICKET_REPLAY_INTERVAL_MS='2000'; npm run dev`. CMD: `set CRICKET_MATCH_ID=2` then `npm run dev`.
 8. In another terminal, `cd frontend`, `npm install`, `npm run dev`.
 9. Open `/cricket` route in frontend (see `src/App.jsx` for route), open devtools console and verify `cricket-live-data` messages. Display text fields from `matchData`: `runs`, `wickets`, `overs`, `batter.trustScore`, `bowler.trustScore`, `pressure.score`, and `modelStatus`.

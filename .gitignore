@@ -52,5 +52,3 @@ backend/data/*.json
 # Trained ML model artifacts
 ml_service/artifacts/
 
-# Large cricket dataset
-backend/data/mensIPLHawkeyeStats.csv

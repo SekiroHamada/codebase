@@ -77,7 +77,9 @@ function setupRoster(rows){
   return {batting, bowling};
 }
 function emit(event, payload){
-  for (const socket of activeClients.cricket.values()) socket.emit(event,payload);
+  // namespaced so it never collides with the master cricket pipeline's 'cricket-live-data' / 'init-roster'
+  const name = event === 'init-roster' ? 'cricket-ml-init-roster' : event.replace(/^cricket-/, 'cricket-ml-');
+  for (const socket of activeClients.cricket.values()) socket.emit(name,payload);
 }
 function makePayload(row, state, prediction, playerScores, roster){
   const onField = [];
