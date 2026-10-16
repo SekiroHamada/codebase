@@ -39,3 +39,18 @@ backend/.devin/
 backend/data/*.json
 # PFF WC2022 raw data (5.4 GB) - copy locally, do not commit
 backend/data/pff_wc2022/
+# Python
+**/.venv/
+**/__pycache__/
+*.pyc
+
+# Node
+**/node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Trained ML model artifacts
+ml_service/artifacts/
+

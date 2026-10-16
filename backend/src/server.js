@@ -2,7 +2,6 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-
 const initializeSockets = require('./sockets/socketManager');
 const initializeCricketSockets = require('./sockets/cricketSocketManager');
 const apiRoutes = require('./routes/apiRoutes');
